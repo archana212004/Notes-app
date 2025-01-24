@@ -18,6 +18,12 @@ const Login = () => {
             seterror("Pleasse enter a valid a Email!!");
             return;
         }
+        if (!password) {
+            seterror("Please enter the password!!");
+            return;
+        }
+        seterror("")
+        //Login API call
     };
     return<>
         <Navbar />
