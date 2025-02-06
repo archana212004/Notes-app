@@ -21,6 +21,9 @@ const AddEditNotes = () =>{
                     rows={10}
                 />
             </div>
+            <div className="mt-3">
+                <label className="input-label">TAGS</label>
+            </div>
         </div>
     )
 }
