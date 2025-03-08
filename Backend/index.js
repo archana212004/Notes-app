@@ -31,7 +31,7 @@ app.use(express.json());
 app.use(cors({ origin: "*" }));
 
 //create Account
-app.post("/create", async (req, res) => {
+app.post("/create-account", async (req, res) => {
 
     const{fullname, email, password} = req.body;
 
@@ -78,15 +78,48 @@ app.post("/create", async (req, res) => {
     });
 })
 
+//Login account
+app.post('/login', async (req,res) => {
+  const{email,password} = req.body;
+
+  if(!email){
+    return res.status(400) .json({message: "EMail is reequired!!"});
+  }
+
+  if(!password){
+    return res.status(400).json({message: "Password is requied!!"});
+  }
+
+  constyInfo = await User.findOne({email: email});
+
+  if(!userInfo){
+    return res.status(400).json({message: "user not found!!"});
+  }
+
+  if(userInfo.email == email && userInfo.password == password){
+    const user = {user: userInfo};
+    const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+      expiresIn:"3600m"
+    });
+  }
+  else{
+    return res.status(400).json({
+      error: true,
+      message: "Invalid Creadentials",
+    })
+  }
+})
+
 // Test Route
 app.get("/", (req, res) => {
   res.json({ data: "Hello world" });
 });
 
 // Start Server
-const PORT = process.env.PORT || 5004;
+const PORT = process.env.PORT || 5008;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 
+app.use(express.json());
 module.exports = app;
