@@ -3,7 +3,9 @@ import Navbar from "../../components/Navbar/Navbar";
 import { Link } from "react-router-dom";
 import PasswordInput from "../../components/input/PasswordInput";
 import { validEmail } from "../../utills/helper";
-import { BrowserRouter } from "react-router-dom";
+import './LoginForm.css';
+import backgroundImage from "../../assets/background.jpg";
+
 
 const Login = () => {
 
@@ -14,51 +16,67 @@ const Login = () => {
     const handleLogin = async (e) => {
         e.preventDefault();
 
-        if(!validEmail(email)) {
-            seterror("Pleasse enter a valid a Email!!");
+        if (!validEmail(email)) {
+            seterror("Please enter a valid Email!!");
             return;
         }
         if (!password) {
             seterror("Please enter the password!!");
             return;
         }
-        seterror("")
+        seterror("");
         //Login API call
     };
-    return<>
-        <Navbar />
 
-        <div className="flex items-center justify-center mt-28">
-            <div className="w-96 border rounded bg-white px-7 py-10">
-                <form onSubmit={handleLogin}>
-                    <h4 className="text-2xl mb-7">Login</h4>
+    return (
+        <>
+            <Navbar />
 
-                    <input type="text"
-                    placeholder="Email"
-                    className="input-box" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    />
+            <div
+                style={{
+                    height: "100vh",
+                    backgroundImage: `url(${backgroundImage})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                }}
+            >
+                <div className="w-96 border rounded bg-white px-7 py-10 shadow-lg">
+                    <form onSubmit={handleLogin}>
+                        <h4 className="text-2xl mb-7">Login</h4>
 
-                    <PasswordInput
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                    />
-                    {error && <p className="text-res-500 text-xs pb-1">{error}</p>}
-                    <button type="submit" className="btn-primary">
-                        Login
-                    </button>
+                        <input
+                            type="text"
+                            placeholder="Email"
+                            className="input-box"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
 
-                    <p className="text-sm text-center mt-4">
-                        Not Registered yet?{" "}
-                        <Link to="/SignUp" className="font-medium text-primary underline">
-                            Create an account
-                        </Link>
-                    </p>
-                </form>
+                        <PasswordInput
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                        {error && <p className="text-red-500 text-xs pb-1">{error}</p>}
+
+                        <button type="submit" className="btn-primary">
+                            Login
+                        </button>
+
+                        <p className="text-sm text-center mt-4">
+                            Not Registered yet?{" "}
+                            <Link to="/SignUp" className="font-medium text-primary underline">
+                                Create an account
+                            </Link>
+                        </p>
+                    </form>
+                </div>
             </div>
-        </div>
-    </>;
+        </>
+    );
 };
 
-export default Login
+export default Login;
