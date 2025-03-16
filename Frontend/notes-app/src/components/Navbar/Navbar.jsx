@@ -1,23 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ProfileInfo from "../Cards/ProfileInfo";
-import SearchBar from "../SearchBar/SearchBar";
 
 const Navbar = () => {
-    const [searchQuery, setSearchQuery] = useState("");
-    const navigate = useNavigate(); // Fixing useNavigate usage
+    const [username, setUsername] = useState(localStorage.getItem("username") || "");
+    const navigate = useNavigate();
 
     const onLogout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("username");
+        setUsername("");
+        alert("Logged out successfully!");
         navigate("/login");
     };
 
-    const handleSearch = () => {
-        // Implement search functionality
-    };
-
-    const onClearSearch = () => {
-        setSearchQuery("");
-    };
+    useEffect(() => {
+        setUsername(localStorage.getItem("username"));
+    }, []);
 
     return (
         <div className="bg-gradient-to-r from-pink-500 to-indigo-600 flex items-center justify-between px-6 py-3 shadow-lg rounded-b-lg">
@@ -25,14 +24,16 @@ const Navbar = () => {
                 Notes App
             </h2>
 
-            <SearchBar
-                value={searchQuery}
-                onChange={({ target }) => setSearchQuery(target.value)}
-                handleSearch={handleSearch}
-                onClearSearch={onClearSearch}
-            />
-
-            <ProfileInfo onLogout={onLogout} />
+            {username ? (
+                <div className="flex items-center space-x-4">
+                    <span className="text-white font-medium">{username}</span>
+                    <button onClick={onLogout} className="bg-white text-red-500 px-3 py-1 rounded">
+                        Logout
+                    </button>
+                </div>
+            ) : (
+                <ProfileInfo onLogout={onLogout} />
+            )}
         </div>
     );
 };

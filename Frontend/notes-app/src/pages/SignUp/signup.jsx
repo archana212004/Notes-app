@@ -47,7 +47,8 @@ const SignUp = () => {
                     backgroundRepeat: "no-repeat",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center"
+                    justifyContent: "center",
+                    overflow:"hidden"
                 }}
             >
                 <div className="w-96 border rounded bg-white px-7 py-10">
@@ -67,7 +68,7 @@ const SignUp = () => {
                             placeholder="Email"
                             className="input-box"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)} // Fixed typo here
+                            onChange={(e) => setEmail(e.target.value)}
                         />
 
                         <PasswordInput

@@ -3,34 +3,53 @@ import Navbar from "../../components/Navbar/Navbar";
 import { Link } from "react-router-dom";
 import PasswordInput from "../../components/input/PasswordInput";
 import { validEmail } from "../../utills/helper";
-import './LoginForm.css';
+import "./LoginForm.css";
 import backgroundImage from "../../assets/background.jpg";
 
-
-const Login = () => {
-
+const Login = ({ setUser }) => { // Add setUser prop
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, seterror] = useState(null);
+    const [error, setError] = useState(null);
 
     const handleLogin = async (e) => {
         e.preventDefault();
 
         if (!validEmail(email)) {
-            seterror("Please enter a valid Email!!");
+            setError("Please enter a valid Email!!");
             return;
         }
         if (!password) {
-            seterror("Please enter the password!!");
+            setError("Please enter the password!!");
             return;
         }
-        seterror("");
-        //Login API call
+
+        try {
+            const response = await fetch("http://localhost:5008/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setError(data.error);
+                return;
+            }
+
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("username", data.username);
+            setUser(data.username); // Set user in state
+            alert("Login successful!");
+        } catch (error) {
+            console.error("Login failed:", error);
+            setError("Something went wrong!");
+        }
     };
 
     return (
         <>
-            <Navbar />
+            <Navbar user={localStorage.getItem("username")} />
 
             <div
                 style={{
@@ -41,7 +60,7 @@ const Login = () => {
                     backgroundRepeat: "no-repeat",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center"
+                    justifyContent: "center",
                 }}
             >
                 <div className="w-96 border rounded bg-white px-7 py-10 shadow-lg">

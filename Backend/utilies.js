@@ -15,4 +15,4 @@ function autheticateToken(req, res, next){
 
 module.exports = {
     autheticateToken,
-}
+};
