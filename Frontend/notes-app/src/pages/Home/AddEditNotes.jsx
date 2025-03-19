@@ -14,9 +14,14 @@ const AddEditNotes = ({ noteData, type,onClose, onSave, initialData }) => {
     };
 
     // Edit Note
-    const editNote = async () =>{
-        
-    }
+    const handleEdit = (id, newTitle, newContent, newTags) => {
+        setNotes((prevNotes) =>
+            prevNotes.map((note) =>
+                note.id === id ? { ...note, title: newTitle, content: newContent, tags: newTags } : note
+            )
+        );
+    };
+    
     const handleSave = () => {
         if (!title.trim() || !content.trim()) {
             setError("Title and Content are required!");
@@ -24,7 +29,7 @@ const AddEditNotes = ({ noteData, type,onClose, onSave, initialData }) => {
         }
 
         if(type === 'edit'){
-            editNote()
+            handleEdit()
         }
         else{
             addNewNote()
