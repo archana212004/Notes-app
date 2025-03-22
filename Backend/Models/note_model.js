@@ -1,13 +1,36 @@
-const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoose = require('mongoose');
 
-const notesSchema = new Schema({
-    title: {type: String, required: true},
-    content:{type:String, required: true},
-    tags:   {type:[String], default: []},
-    isPinned: {type:Boolean, default: false},
-    useId: {type:String, required: true },
-    createdOn: {type: Date, default:new Date().getTime()},
+const noteSchema = new mongoose.Schema({
+    title: {
+        type: String,
+        required: [true, "Title is required"],
+        trim: true
+    },
+    content: {
+        type: String,
+        required: [true, "Content is required"],
+        trim: true
+    },
+    tags: {
+        type: [String],
+        default: []
+    },
+    isPinned: {
+        type: Boolean,
+        default: false
+    },
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    createdOn: {
+        type: Date,
+        default: Date.now
+    }
 });
 
-module.exports = mongoose.model("Note", notesSchema);
+// Add indexes for better query performance
+noteSchema.index({ userId: 1, isPinned: -1, createdOn: -1 });
+
+module.exports = mongoose.model('Note', noteSchema);

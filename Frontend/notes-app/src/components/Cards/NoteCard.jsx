@@ -1,92 +1,80 @@
-import React, { useState } from "react";
-import { MdOutlinePushPin, MdCreate, MdDelete, MdSave, MdClose } from "react-icons/md";
+import React from 'react';
 
-const NoteCard = ({ id, title, date, content, tags, isPinned, onEdit, onDelete, onPinNote }) => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [editedTitle, setEditedTitle] = useState(title);
-    const [editedContent, setEditedContent] = useState(content);
-    const [editedTags, setEditedTags] = useState(tags);
-
-    // Save Changes
-    const handleSave = () => {
-        onEdit(id, editedTitle, editedContent, editedTags);
-        setIsEditing(false);
+const NoteCard = ({ note, onEdit, onDelete, onPin }) => {
+    const formatDate = (dateString) => {
+        const options = { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        return new Date(dateString).toLocaleDateString(undefined, options);
     };
 
     return (
-        <div className="border rounded-xl p-5 bg-gradient-to-br from-pink-100 to-purple-100 shadow-md hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 mb-3">
+        <div className={`bg-white rounded-lg shadow-md p-4 ${note.isPinned ? 'border-2 border-purple-500' : ''}`}>
             {/* Header */}
-            <div className="flex items-center justify-between mb-2">
-                <div>
-                    {isEditing ? (
-                        <input
-                            type="text"
-                            value={editedTitle}
-                            onChange={(e) => setEditedTitle(e.target.value)}
-                            className="text-md font-bold text-purple-700 border-b border-purple-300 outline-none bg-transparent"
-                        />
-                    ) : (
-                        <h6 className="text-md font-bold text-purple-700">{title}</h6>
-                    )}
-                    <span className="text-xs text-slate-500">{date}</span>
+            <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-semibold text-gray-800 flex-grow pr-2">
+                    {note.title}
+                </h3>
+                <div className="flex items-center space-x-2">
+                    <button
+                        onClick={() => onPin(note._id)}
+                        className={`p-1 rounded-full hover:bg-gray-100 transition-colors duration-200
+                            ${note.isPinned ? 'text-purple-600' : 'text-gray-400'}`}
+                        title={note.isPinned ? "Unpin note" : "Pin note"}
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                            />
+                        </svg>
+                    </button>
                 </div>
-
-                <MdOutlinePushPin
-                    className={`text-xl cursor-pointer ${isPinned ? "text-purple-500" : "text-slate-300"} hover:scale-110 transition-transform duration-200`}
-                    onClick={onPinNote}
-                />
             </div>
 
             {/* Content */}
-            {isEditing ? (
-                <textarea
-                    value={editedContent}
-                    onChange={(e) => setEditedContent(e.target.value)}
-                    className="text-sm text-slate-700 w-full p-1 border border-purple-300 rounded-md bg-transparent"
-                />
-            ) : (
-                <p className="text-sm text-slate-700 mt-2">{content}</p>
+            <div className="mb-4">
+                <p className="text-gray-600 whitespace-pre-wrap">
+                    {note.content}
+                </p>
+            </div>
+
+            {/* Tags */}
+            {note.tags && note.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                    {note.tags.map((tag, index) => (
+                        <span
+                            key={index}
+                            className="px-2 py-1 bg-purple-100 text-purple-600 text-sm rounded-full"
+                        >
+                            {tag}
+                        </span>
+                    ))}
+                </div>
             )}
 
             {/* Footer */}
-            <div className="flex items-center justify-between mt-4">
-                {/* Tags Section */}
-                {isEditing ? (
-                    <input
-                        type="text"
-                        value={editedTags}
-                        onChange={(e) => setEditedTags(e.target.value)}
-                        className="text-xs px-2 py-1 rounded-full border border-purple-300 text-purple-700 bg-transparent"
-                    />
-                ) : (
-                    <div className="text-xs px-2 py-1 rounded-full bg-purple-200 text-purple-700">{tags}</div>
-                )}
-
-                {/* Action Icons */}
-                <div className="flex items-center gap-3">
-                    {isEditing ? (
-                        <>
-                            <MdSave
-                                className="text-xl text-blue-500 cursor-pointer hover:scale-110 transition-transform duration-200"
-                                onClick={handleSave}
-                            />
-                            <MdClose
-                                className="text-xl text-gray-500 cursor-pointer hover:scale-110 transition-transform duration-200"
-                                onClick={() => setIsEditing(false)}
-                            />
-                        </>
-                    ) : (
-                        <>
-                            <MdCreate
-                                className="text-xl text-green-500 cursor-pointer hover:scale-110 transition-transform duration-200"
-                                onClick={() => setIsEditing(true)}
-                            />
-                            <MdDelete
-                                className="text-xl text-red-500 cursor-pointer hover:scale-110 transition-transform duration-200"
-                                onClick={() => onDelete(id)}
-                            />
-                        </>
-                    )}
+            <div className="flex justify-between items-center text-sm text-gray-500">
+                <span>{formatDate(note.createdOn)}</span>
+                <div className="flex space-x-2">
+                    <button
+                        onClick={() => onEdit(note)}
+                        className="text-blue-600 hover:text-blue-800 transition-colors duration-200"
+                    >
+                        Edit
+                    </button>
+                    <button
+                        onClick={() => onDelete(note._id)}
+                        className="text-red-600 hover:text-red-800 transition-colors duration-200"
+                    >
+                        Delete
+                    </button>
                 </div>
             </div>
         </div>

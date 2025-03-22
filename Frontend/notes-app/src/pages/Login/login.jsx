@@ -24,9 +24,12 @@ const Login = ({ setUser }) => { // Add setUser prop
         }
 
         try {
-            const response = await fetch("http://localhost:5008/login", {
+            const response = await fetch("http://localhost:5022/api/login", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
                 body: JSON.stringify({ email, password }),
             });
 
@@ -38,9 +41,9 @@ const Login = ({ setUser }) => { // Add setUser prop
             }
 
             localStorage.setItem("token", data.token);
-            localStorage.setItem("username", data.username);
-            setUser(data.username); // Set user in state
-            alert("Login successful!");
+            localStorage.setItem("username", data.fullname);
+            setUser(data.fullname); // Set user in state
+            window.location.href = "/dashboard";
         } catch (error) {
             console.error("Login failed:", error);
             setError("Something went wrong!");

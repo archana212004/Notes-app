@@ -1,87 +1,104 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import TagInput from "../../components/input/TagInput";
 import { MdClose } from "react-icons/md";
 
-const AddEditNotes = ({ noteData, type,onClose, onSave, initialData }) => {
+const AddEditNotes = ({ onClose, onSave, initialData, type }) => {
     const [title, setTitle] = useState(initialData?.title || "");
     const [content, setContent] = useState(initialData?.content || "");
     const [tags, setTags] = useState(initialData?.tags || []);
     const [error, setError] = useState("");
 
-    // Add note
-    const addNewNote = async ()=>{
+    const handleSave = async () => {
+        try {
+            console.log('Attempting to save note...'); // Debug log
+            
+            if (!title.trim() || !content.trim()) {
+                setError("Title and Content are required!");
+                return;
+            }
 
-    };
+            const noteData = {
+                title: title.trim(),
+                content: content.trim(),
+                tags: tags.filter(tag => tag.trim() !== ""),
+                isPinned: initialData?.isPinned || false
+            };
 
-    // Edit Note
-    const handleEdit = (id, newTitle, newContent, newTags) => {
-        setNotes((prevNotes) =>
-            prevNotes.map((note) =>
-                note.id === id ? { ...note, title: newTitle, content: newContent, tags: newTags } : note
-            )
-        );
-    };
-    
-    const handleSave = () => {
-        if (!title.trim() || !content.trim()) {
-            setError("Title and Content are required!");
-            return;
-        }
+            console.log('Note data being sent:', noteData); // Debug log
 
-        if(type === 'edit'){
-            handleEdit()
+            if (type === 'edit' && initialData?._id) {
+                await onSave(initialData._id, noteData);
+            } else {
+                await onSave(null, noteData);
+            }
+
+            console.log('Note saved successfully'); // Debug log
+            onClose();
+        } catch (err) {
+            console.error('Error in handleSave:', err); // Debug log
+            setError(err.message || "Failed to save note");
         }
-        else{
-            addNewNote()
-        }
-        const newNote = { title, content, tags };
-        onSave(newNote);
-        setTitle(""); // Clear title input
-        setContent(""); // Clear content input
-        setTags([]); // Clear tags
-        setError(""); // Reset error
     };
 
     return (
-        <div className="p-5 bg-white shadow-lg rounded-lg w-full max-w-md">
-            <div className="flex justify-between items-center mb-4 relative">
-                <h2 className="text-xl font-semibold">{initialData ? "Edit Note" : "Add Note"}</h2>
-                <button className="w-10 h-10 rounded-full flex items-center justify-center absolute -top-3 -right-3 hover:bg-slate-50" onClick={onClose}>
-                    <MdClose className="text-2xl text-slate-400" />
+        <div className="p-5 bg-white shadow-lg rounded-lg w-full max-w-md mx-auto">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">{type === 'edit' ? "Edit Note" : "Add Note"}</h2>
+                <button 
+                    className="text-gray-500 hover:text-gray-700"
+                    onClick={onClose}
+                >
+                    <MdClose size={24} />
                 </button>
             </div>
-            {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-            <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-gray-700">TITLE</label>
-                <input
-                    type="text"
-                    className="p-2 border rounded focus:ring focus:ring-blue-300"
-                    placeholder="Go To Gym At 5"
-                    value={title}
-                    onChange={({ target }) => setTitle(target.value)}
-                />
+
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+                    {error}
+                </div>
+            )}
+
+            <div className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Title
+                    </label>
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="w-full p-2 border rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Enter note title"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Content
+                    </label>
+                    <textarea
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        rows={6}
+                        className="w-full p-2 border rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Enter note content"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tags
+                    </label>
+                    <TagInput tags={tags} setTags={setTags} />
+                </div>
+
+                <button
+                    onClick={handleSave}
+                    className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 transition-colors duration-300"
+                >
+                    {type === 'edit' ? "Update Note" : "Add Note"}
+                </button>
             </div>
-            <div className="flex flex-col gap-2 mt-4">
-                <label className="text-sm font-medium text-gray-700">CONTENT</label>
-                <textarea
-                    className="p-2 border rounded focus:ring focus:ring-blue-300"
-                    placeholder="Content"
-                    rows={6}
-                    value={content}
-                    onChange={({ target }) => setContent(target.value)}
-                />
-            </div>
-            <div className="mt-3">
-                <label className="text-sm font-medium text-gray-700">TAGS</label>
-                <TagInput tags={tags} setTags={setTags} />
-            </div>
-            
-            <button
-                className="mt-5 w-full p-3 bg-blue-500 text-white font-medium rounded hover:bg-blue-600 transition"
-                onClick={handleSave}
-            >
-                {initialData ? "Update Note" : "Add Note"}
-            </button>
         </div>
     );
 };
