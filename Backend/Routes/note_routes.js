@@ -5,19 +5,25 @@ const jwt = require('jsonwebtoken');
 
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({ error: "Access denied. No token provided." });
-    }
-
     try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).json({ 
+                success: false,
+                error: "Access denied. No token provided." 
+            });
+        }
+
         const verified = jwt.verify(token, process.env.JWT_SECRET);
         req.user = verified;
         next();
     } catch (error) {
-        res.status(403).json({ error: "Invalid token." });
+        res.status(403).json({ 
+            success: false,
+            error: "Invalid token." 
+        });
     }
 };
 
@@ -27,25 +33,41 @@ router.use(authenticateToken);
 // Get all notes for a user
 router.get('/', async (req, res) => {
     try {
-        console.log('📝 Fetching notes for user:', req.user.userId);
         const notes = await Note.find({ userId: req.user.userId })
             .sort({ isPinned: -1, createdOn: -1 });
-        console.log(`✅ Found ${notes.length} notes`);
-        res.json({ notes });
+        
+        res.json({ 
+            success: true,
+            message: "Notes fetched successfully",
+            notes,
+            count: notes.length
+        });
     } catch (error) {
-        console.error('❌ Error fetching notes:', error);
-        res.status(500).json({ error: "Error fetching notes" });
+        console.error('Error fetching notes:', error);
+        res.status(500).json({ 
+            success: false,
+            error: "Error fetching notes",
+            details: error.message 
+        });
     }
 });
 
 // Create a new note
 router.post('/', async (req, res) => {
     try {
-        console.log('📝 Creating new note:', req.body);
-        const { title, content, tags } = req.body;
+        const { title, content, tags, isPinned } = req.body;
         
-        if (!title?.trim() || !content?.trim()) {
-            return res.status(400).json({ error: "Title and content are required" });
+        if (!title?.trim()) {
+            return res.status(400).json({ 
+                success: false,
+                error: "Title is required" 
+            });
+        }
+        if (!content?.trim()) {
+            return res.status(400).json({ 
+                success: false,
+                error: "Content is required" 
+            });
         }
 
         const note = new Note({
@@ -53,99 +75,139 @@ router.post('/', async (req, res) => {
             content: content.trim(),
             tags: tags || [],
             userId: req.user.userId,
-            isPinned: false,
+            isPinned: isPinned || false,
             createdOn: new Date()
         });
 
         const savedNote = await note.save();
-        console.log('✅ Note created successfully:', savedNote._id);
+        
         res.status(201).json({ 
+            success: true,
             message: "Note created successfully",
             note: savedNote
         });
     } catch (error) {
-        console.error('❌ Error creating note:', error);
-        res.status(500).json({ error: "Error creating note" });
+        console.error('Error creating note:', error);
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ 
+                success: false,
+                error: error.message 
+            });
+        }
+        res.status(500).json({ 
+            success: false,
+            error: "Error creating note",
+            details: error.message 
+        });
     }
 });
 
 // Update a note
 router.put('/:id', async (req, res) => {
     try {
-        console.log('📝 Updating note:', req.params.id);
-        const { title, content, tags } = req.body;
+        const { title, content, tags, isPinned } = req.body;
         
         if (!title?.trim() || !content?.trim()) {
-            return res.status(400).json({ error: "Title and content are required" });
+            return res.status(400).json({ 
+                success: false,
+                error: "Title and content are required" 
+            });
         }
 
-        const note = await Note.findOne({ _id: req.params.id, userId: req.user.userId });
+        const note = await Note.findOne({ 
+            _id: req.params.id, 
+            userId: req.user.userId 
+        });
         
         if (!note) {
-            return res.status(404).json({ error: "Note not found" });
+            return res.status(404).json({ 
+                success: false,
+                error: "Note not found" 
+            });
         }
 
         note.title = title.trim();
         note.content = content.trim();
         note.tags = tags || [];
+        note.isPinned = isPinned !== undefined ? isPinned : note.isPinned;
         
         const updatedNote = await note.save();
-        console.log('✅ Note updated successfully:', updatedNote._id);
+        
         res.json({ 
+            success: true,
             message: "Note updated successfully",
             note: updatedNote
         });
     } catch (error) {
-        console.error('❌ Error updating note:', error);
-        res.status(500).json({ error: "Error updating note" });
+        console.error('Error updating note:', error);
+        res.status(500).json({ 
+            success: false,
+            error: "Error updating note",
+            details: error.message 
+        });
     }
 });
 
 // Delete a note
 router.delete('/:id', async (req, res) => {
     try {
-        console.log('🗑️ Deleting note:', req.params.id);
         const note = await Note.findOneAndDelete({ 
             _id: req.params.id, 
             userId: req.user.userId 
         });
 
         if (!note) {
-            return res.status(404).json({ error: "Note not found" });
+            return res.status(404).json({ 
+                success: false,
+                error: "Note not found" 
+            });
         }
 
-        console.log('✅ Note deleted successfully:', req.params.id);
-        res.json({ message: "Note deleted successfully" });
+        res.json({ 
+            success: true,
+            message: "Note deleted successfully",
+            noteId: req.params.id
+        });
     } catch (error) {
-        console.error('❌ Error deleting note:', error);
-        res.status(500).json({ error: "Error deleting note" });
+        console.error('Error deleting note:', error);
+        res.status(500).json({ 
+            success: false,
+            error: "Error deleting note",
+            details: error.message 
+        });
     }
 });
 
 // Toggle pin status
 router.patch('/:id/pin', async (req, res) => {
     try {
-        console.log('📌 Toggling pin status for note:', req.params.id);
         const note = await Note.findOne({ 
             _id: req.params.id, 
             userId: req.user.userId 
         });
 
         if (!note) {
-            return res.status(404).json({ error: "Note not found" });
+            return res.status(404).json({ 
+                success: false,
+                error: "Note not found" 
+            });
         }
 
         note.isPinned = !note.isPinned;
         await note.save();
 
-        console.log('✅ Pin status updated successfully:', note._id, note.isPinned);
         res.json({ 
+            success: true,
             message: `Note ${note.isPinned ? 'pinned' : 'unpinned'} successfully`,
             note
         });
     } catch (error) {
-        console.error('❌ Error toggling pin status:', error);
-        res.status(500).json({ error: "Error updating pin status" });
+        console.error('Error toggling pin status:', error);
+        res.status(500).json({ 
+            success: false,
+            error: "Error updating pin status",
+            details: error.message 
+        });
     }
 });
 

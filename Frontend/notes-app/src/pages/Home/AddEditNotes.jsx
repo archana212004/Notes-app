@@ -7,13 +7,20 @@ const AddEditNotes = ({ onClose, onSave, initialData, type }) => {
     const [content, setContent] = useState(initialData?.content || "");
     const [tags, setTags] = useState(initialData?.tags || []);
     const [error, setError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSave = async () => {
         try {
-            console.log('Attempting to save note...'); // Debug log
+            setIsSubmitting(true);
+            setError("");
             
-            if (!title.trim() || !content.trim()) {
-                setError("Title and Content are required!");
+            // Validate inputs
+            if (!title.trim()) {
+                setError("Title is required!");
+                return;
+            }
+            if (!content.trim()) {
+                setError("Content is required!");
                 return;
             }
 
@@ -24,19 +31,23 @@ const AddEditNotes = ({ onClose, onSave, initialData, type }) => {
                 isPinned: initialData?.isPinned || false
             };
 
-            console.log('Note data being sent:', noteData); // Debug log
+            console.log('Attempting to save note with data:', noteData);
 
-            if (type === 'edit' && initialData?._id) {
-                await onSave(initialData._id, noteData);
+            // Call the onSave function passed from parent
+            const success = await onSave(initialData?._id || null, noteData);
+            
+            if (success) {
+                console.log('Note saved successfully');
+                onClose(); // Close the modal only on success
             } else {
-                await onSave(null, noteData);
+                console.log('Note save failed');
+                // Error will be set by the parent component
             }
-
-            console.log('Note saved successfully'); // Debug log
-            onClose();
         } catch (err) {
-            console.error('Error in handleSave:', err); // Debug log
-            setError(err.message || "Failed to save note");
+            console.error('Error in handleSave:', err);
+            setError(err.message || "Failed to save note. Please try again.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -47,6 +58,7 @@ const AddEditNotes = ({ onClose, onSave, initialData, type }) => {
                 <button 
                     className="text-gray-500 hover:text-gray-700"
                     onClick={onClose}
+                    disabled={isSubmitting}
                 >
                     <MdClose size={24} />
                 </button>
@@ -61,7 +73,7 @@ const AddEditNotes = ({ onClose, onSave, initialData, type }) => {
             <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Title
+                        Title <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
@@ -69,12 +81,14 @@ const AddEditNotes = ({ onClose, onSave, initialData, type }) => {
                         onChange={(e) => setTitle(e.target.value)}
                         className="w-full p-2 border rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="Enter note title"
+                        disabled={isSubmitting}
+                        required
                     />
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Content
+                        Content <span className="text-red-500">*</span>
                     </label>
                     <textarea
                         value={content}
@@ -82,6 +96,8 @@ const AddEditNotes = ({ onClose, onSave, initialData, type }) => {
                         rows={6}
                         className="w-full p-2 border rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="Enter note content"
+                        disabled={isSubmitting}
+                        required
                     />
                 </div>
 
@@ -89,14 +105,29 @@ const AddEditNotes = ({ onClose, onSave, initialData, type }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                         Tags
                     </label>
-                    <TagInput tags={tags} setTags={setTags} />
+                    <TagInput 
+                        tags={tags} 
+                        setTags={setTags}
+                        disabled={isSubmitting}
+                    />
                 </div>
 
                 <button
                     onClick={handleSave}
-                    className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 transition-colors duration-300"
+                    disabled={isSubmitting}
+                    className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                    {type === 'edit' ? "Update Note" : "Add Note"}
+                    {isSubmitting ? (
+                        <>
+                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            {type === 'edit' ? "Updating..." : "Adding..."}
+                        </>
+                    ) : (
+                        type === 'edit' ? "Update Note" : "Add Note"
+                    )}
                 </button>
             </div>
         </div>

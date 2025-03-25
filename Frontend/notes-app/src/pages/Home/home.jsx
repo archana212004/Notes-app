@@ -17,6 +17,35 @@ const getDefaultOptions = (token) => ({
     }
 });
 
+// Add these styles at the top of the file, after the imports
+const modalStyles = {
+    overlay: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+    },
+    content: {
+        position: 'relative',
+        top: 'auto',
+        left: 'auto',
+        right: 'auto',
+        bottom: 'auto',
+        margin: '20px',
+        padding: 0,
+        border: 'none',
+        background: 'transparent',
+        maxWidth: '500px',
+        width: '100%'
+    }
+};
+
 const Home = () => {
     const navigate = useNavigate();
     const [openAddEditModal, setOpenAddEditModel] = useState({
@@ -59,19 +88,22 @@ const Home = () => {
             setError(null);
             const token = localStorage.getItem("token");
             
+            console.log('Fetching notes...');
             const response = await fetch(`${API_BASE_URL}/api/notes`, {
                 method: "GET",
                 ...getDefaultOptions(token)
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || "Failed to fetch notes");
+            const data = await response.json();
+            console.log('Fetched notes:', data);
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || "Failed to fetch notes");
             }
 
-            const data = await response.json();
             setNotes(data.notes || []);
         } catch (err) {
+            console.error('Error fetching notes:', err);
             handleApiError(err);
         } finally {
             setIsLoading(false);
@@ -89,66 +121,39 @@ const Home = () => {
                 throw new Error("Authentication token not found. Please login again.");
             }
 
-            console.log('Starting note save operation...'); // Debug log
-            console.log('Token exists:', !!token); // Debug log
-            console.log('Note data:', noteData); // Debug log
+            const url = noteId 
+                ? `${API_BASE_URL}/api/notes/${noteId}`
+                : `${API_BASE_URL}/api/notes`;
 
-            if (openAddEditModal.type === 'edit' && noteId) {
-                // Update existing note
-                console.log('Updating existing note:', noteId); // Debug log
-                const response = await fetch(`${API_BASE_URL}/api/notes/${noteId}`, {
-                    method: "PUT",
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(noteData)
-                });
+            console.log('Making request to:', url);
+            console.log('With data:', noteData);
 
-                console.log('Update response status:', response.status); // Debug log
+            const response = await fetch(url, {
+                method: noteId ? "PUT" : "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(noteData)
+            });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || "Failed to update note");
-                }
+            const data = await response.json();
 
-                const updatedNote = await response.json();
-                console.log('Note updated successfully:', updatedNote); // Debug log
-                setNotes(notes.map(note => 
-                    note._id === noteId 
-                        ? { ...note, ...updatedNote.note }
-                        : note
-                ));
-            } else {
-                // Create new note
-                console.log('Creating new note...'); // Debug log
-                const response = await fetch(`${API_BASE_URL}/api/notes`, {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(noteData)
-                });
-
-                console.log('Create response status:', response.status); // Debug log
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('Error response:', errorData); // Debug log
-                    throw new Error(errorData.error || "Failed to create note");
-                }
-
-                const newNote = await response.json();
-                console.log('New note created:', newNote); // Debug log
-                setNotes(prevNotes => [newNote.note, ...prevNotes]);
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || `Failed to ${noteId ? 'update' : 'create'} note`);
             }
+
+            console.log('Response data:', data);
             
-            // Close modal only if the operation was successful
+            // Close modal only if operation was successful
             setOpenAddEditModel({ isShown: false, type: "add", data: null });
+            // Fetch notes again to ensure we have the latest data
+            await fetchNotes();
+            return true;
         } catch (err) {
-            console.error('Error in handleSaveNote:', err); // Debug log
+            console.error('Error in handleSaveNote:', err);
             setError(err.message || "Failed to save note. Please try again.");
+            return false;
         } finally {
             setIsLoading(false);
         }
@@ -157,45 +162,56 @@ const Home = () => {
     // ✅ Function to TOGGLE PIN
     const handlePinNote = async (id) => {
         try {
+            setIsLoading(true);
             setError(null);
             const token = localStorage.getItem("token");
-            const note = notes.find(n => n._id === id);
             
             const response = await fetch(`${API_BASE_URL}/api/notes/${id}/pin`, {
                 method: "PATCH",
-                ...getDefaultOptions(token),
-                body: JSON.stringify({ isPinned: !note.isPinned })
+                ...getDefaultOptions(token)
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || "Failed to update pin status");
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || "Failed to update pin status");
             }
 
-            setNotes(notes.map(note => note._id === id ? { ...note, isPinned: !note.isPinned } : note));
+            // Update local state with the new note data
+            setNotes(prevNotes => prevNotes.map(note => 
+                note._id === id ? data.note : note
+            ));
         } catch (err) {
             handleApiError(err);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     // ✅ Function to DELETE Note
     const handleDeleteNote = async (id) => {
         try {
+            setIsLoading(true);
             setError(null);
             const token = localStorage.getItem("token");
+            
             const response = await fetch(`${API_BASE_URL}/api/notes/${id}`, {
                 method: "DELETE",
                 ...getDefaultOptions(token)
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || "Failed to delete note");
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || "Failed to delete note");
             }
 
-            setNotes(notes.filter(note => note._id !== id));
+            // Update local state by removing the deleted note
+            setNotes(prevNotes => prevNotes.filter(note => note._id !== id));
         } catch (err) {
             handleApiError(err);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -237,7 +253,29 @@ const Home = () => {
                     padding: "20px",
                 }}
             >
-                {/* Content Container */}
+                {/* Add Note Button */}
+                <div className="w-full max-w-6xl mx-auto mb-6">
+                    <button
+                        onClick={() => handleOpenModal("add")}
+                        className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-300 flex items-center space-x-2"
+                    >
+                        <span>Add Note</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                    <div className="w-full max-w-6xl mx-auto mb-6">
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                            <span className="block sm:inline">{error}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Notes Grid */}
                 <div className="w-full max-w-6xl mx-auto">
                     {isLoading ? (
                         <div className="text-center mt-20">
@@ -245,102 +283,38 @@ const Home = () => {
                             <p className="text-lg text-purple-600 mt-2">Loading your notes...</p>
                         </div>
                     ) : notes.length === 0 ? (
-                        // Empty State Message
-                        <div className="text-center mt-20 p-8 bg-white bg-opacity-90 rounded-xl shadow-lg max-w-md mx-auto">
-                            <h2 className="text-2xl font-bold text-purple-700 mb-4">Welcome to Your Notes App! 📝</h2>
-                            <p className="text-gray-600 mb-6">Start creating your first note!</p>
-                            <button
-                                onClick={() => handleOpenModal("add")}
-                                className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors duration-300"
-                            >
-                                Create Your First Note
-                            </button>
+                        <div className="text-center mt-20">
+                            <p className="text-xl text-gray-600">No notes yet. Click "Add Note" to create one!</p>
                         </div>
                     ) : (
-                        // Notes Grid
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                            {/* Pinned Notes Section */}
-                            {notes.some(note => note.isPinned) && (
-                                <div className="col-span-full">
-                                    <h2 className="text-xl font-semibold mb-3 text-purple-700">📌 Pinned Notes</h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {notes
-                                            .filter(note => note.isPinned)
-                                            .map(note => (
-                                                <NoteCard
-                                                    key={note._id}
-                                                    note={note}
-                                                    onEdit={() => handleOpenModal("edit", note)}
-                                                    onDelete={() => handleDeleteNote(note._id)}
-                                                    onPin={() => handlePinNote(note._id)}
-                                                />
-                                            ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Other Notes Section */}
-                            {notes.some(note => !note.isPinned) && (
-                                <div className="col-span-full mt-6">
-                                    <h2 className="text-xl font-semibold mb-3 text-purple-700">📝 Other Notes</h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {notes
-                                            .filter(note => !note.isPinned)
-                                            .map(note => (
-                                                <NoteCard
-                                                    key={note._id}
-                                                    note={note}
-                                                    onEdit={() => handleOpenModal("edit", note)}
-                                                    onDelete={() => handleDeleteNote(note._id)}
-                                                    onPin={() => handlePinNote(note._id)}
-                                                />
-                                            ))}
-                                    </div>
-                                </div>
-                            )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {notes.map(note => (
+                                <NoteCard
+                                    key={note._id}
+                                    note={note}
+                                    onEdit={() => handleOpenModal("edit", note)}
+                                    onDelete={() => handleDeleteNote(note._id)}
+                                    onPin={() => handlePinNote(note._id)}
+                                />
+                            ))}
                         </div>
                     )}
-
-                    {/* Floating Action Button for adding new note */}
-                    <button
-                        onClick={() => handleOpenModal("add")}
-                        className="fixed bottom-8 right-8 w-14 h-14 bg-purple-600 text-white rounded-full shadow-lg hover:bg-purple-700 transition-colors duration-300 flex items-center justify-center text-2xl"
-                    >
-                        +
-                    </button>
-
-                    {/* Add/Edit Note Modal */}
-                    {openAddEditModal.isShown && (
-                        <Modal
-                            isOpen={openAddEditModal.isShown}
-                            onRequestClose={handleCloseModal}
-                            style={{
-                                overlay: {
-                                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                    zIndex: 1000
-                                },
-                                content: {
-                                    top: '50%',
-                                    left: '50%',
-                                    right: 'auto',
-                                    bottom: 'auto',
-                                    marginRight: '-50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    padding: 0,
-                                    border: 'none',
-                                    background: 'transparent'
-                                }
-                            }}
-                        >
-                            <AddEditNotes
-                                onClose={handleCloseModal}
-                                onSave={handleSaveNote}
-                                initialData={openAddEditModal.data}
-                                type={openAddEditModal.type}
-                            />
-                        </Modal>
-                    )}
                 </div>
+
+                {/* Add/Edit Modal */}
+                <Modal
+                    isOpen={openAddEditModal.isShown}
+                    onRequestClose={handleCloseModal}
+                    style={modalStyles}
+                    contentLabel="Add/Edit Note"
+                >
+                    <AddEditNotes
+                        type={openAddEditModal.type}
+                        initialData={openAddEditModal.data}
+                        onClose={handleCloseModal}
+                        onSave={handleSaveNote}
+                    />
+                </Modal>
             </div>
         </>
     );
